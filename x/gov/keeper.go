@@ -4,10 +4,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	wire "github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/params"
 )
 
 // Governance Keeper
 type Keeper struct {
+	// The reference to the ParamSetter to get and set Global Params
+	ps params.Setter
+
 	// The reference to the CoinKeeper to modify balances
 	ck bank.Keeper
 
@@ -28,9 +32,10 @@ type Keeper struct {
 }
 
 // NewGovernanceMapper returns a mapper that uses go-wire to (binary) encode and decode gov types.
-func NewKeeper(cdc *wire.Codec, key sdk.StoreKey, ck bank.Keeper, ds sdk.DelegationSet, codespace sdk.CodespaceType) Keeper {
+func NewKeeper(cdc *wire.Codec, key sdk.StoreKey, ps params.Setter, ck bank.Keeper, ds sdk.DelegationSet, codespace sdk.CodespaceType) Keeper {
 	return Keeper{
 		storeKey:  key,
+		ps:        ps,
 		ck:        ck,
 		ds:        ds,
 		vs:        ds.GetValidatorSet(),
@@ -128,28 +133,37 @@ func (keeper Keeper) activateVotingPeriod(ctx sdk.Context, proposal Proposal) {
 // =====================================================
 // Procedures
 
-// Gets procedure from store. TODO: move to global param store and allow for updating of this
-func (keeper Keeper) GetDepositProcedure() DepositProcedure {
-	return DepositProcedure{
-		MinDeposit:       sdk.Coins{sdk.NewCoin("steak", 10)},
-		MaxDepositPeriod: 200,
-	}
+// Returns the current Deposit Procedure from the global param store
+func (keeper Keeper) GetDepositProcedure(ctx sdk.Context) DepositProcedure {
+	var depositProcedure DepositProcedure
+	keeper.ps.Get(ctx, "gov/depositprocedure", &depositProcedure)
+	return depositProcedure
 }
 
-// Gets procedure from store. TODO: move to global param store and allow for updating of this
-func (keeper Keeper) GetVotingProcedure() VotingProcedure {
-	return VotingProcedure{
-		VotingPeriod: 200,
-	}
+// Returns the current Voting Procedure from the global param store
+func (keeper Keeper) GetVotingProcedure(ctx sdk.Context) VotingProcedure {
+	var votingProcedure VotingProcedure
+	keeper.ps.Get(ctx, "gov/votingprocedure", &votingProcedure)
+	return votingProcedure
 }
 
-// Gets procedure from store. TODO: move to global param store and allow for updating of this
-func (keeper Keeper) GetTallyingProcedure() TallyingProcedure {
-	return TallyingProcedure{
-		Threshold:         sdk.NewRat(1, 2),
-		Veto:              sdk.NewRat(1, 3),
-		GovernancePenalty: sdk.NewRat(1, 100),
-	}
+// Returns the current Tallying Procedure from the global param store
+func (keeper Keeper) GetTallyingProcedure(ctx sdk.Context) TallyingProcedure {
+	var tallyingProcedure TallyingProcedure
+	keeper.ps.Get(ctx, "gov/tallyingprocedure", &tallyingProcedure)
+	return tallyingProcedure
+}
+
+func (keeper Keeper) setDepositProcedure(ctx sdk.Context, depositProcedure DepositProcedure) {
+	keeper.ps.Set(ctx, "gov/depositprocedure", &depositProcedure)
+}
+
+func (keeper Keeper) setVotingProcedure(ctx sdk.Context, votingProcedure VotingProcedure) {
+	keeper.ps.Set(ctx, "gov/votingprocedure", &votingProcedure)
+}
+
+func (keeper Keeper) setTallyingProcedure(ctx sdk.Context, tallyingProcedure TallyingProcedure) {
+	keeper.ps.Set(ctx, "gov/tallyingprocedure", &tallyingProcedure)
 }
 
 // =====================================================
@@ -256,7 +270,7 @@ func (keeper Keeper) AddDeposit(ctx sdk.Context, proposalID int64, depositerAddr
 	// Check if deposit tipped proposal into voting period
 	// Active voting period if so
 	activatedVotingPeriod := false
-	if proposal.GetStatus() == StatusDepositPeriod && proposal.GetTotalDeposit().IsGTE(keeper.GetDepositProcedure().MinDeposit) {
+	if proposal.GetStatus() == StatusDepositPeriod && proposal.GetTotalDeposit().IsGTE(keeper.GetDepositProcedure(ctx).MinDeposit) {
 		keeper.activateVotingPeriod(ctx, proposal)
 		activatedVotingPeriod = true
 	}

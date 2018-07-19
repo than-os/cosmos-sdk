@@ -135,6 +135,7 @@ type GaiaApp struct {
 	keyStake    *sdk.KVStoreKey
 	keySlashing *sdk.KVStoreKey
 	keyParams   *sdk.KVStoreKey
+	tkeyParams  *sdk.TransientStoreKey
 
 	// Manage getting and setting accounts
 	accountMapper       auth.AccountMapper
@@ -162,6 +163,7 @@ func NewGaiaApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.BaseAp
 		keyStake:    sdk.NewKVStoreKey("stake"),
 		keySlashing: sdk.NewKVStoreKey("slashing"),
 		keyParams:   sdk.NewKVStoreKey("params"),
+		tkeyParams:  sdk.NewTransientStoreKey("params"),
 	}
 
 	// define the accountMapper
@@ -174,7 +176,7 @@ func NewGaiaApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.BaseAp
 	// add handlers
 	app.coinKeeper = bank.NewKeeper(app.accountMapper)
 	app.ibcMapper = ibc.NewMapper(app.cdc, app.keyIBC, app.RegisterCodespace(ibc.DefaultCodespace))
-	app.paramsKeeper = params.NewKeeper(app.cdc, app.keyParams)
+	app.paramsKeeper = params.NewKeeper(app.cdc, app.keyParams, app.tkeyParams)
 	app.stakeKeeper = stake.NewKeeper(app.cdc, app.keyStake, app.coinKeeper, app.RegisterCodespace(stake.DefaultCodespace))
 	app.slashingKeeper = slashing.NewKeeper(app.cdc, app.keySlashing, app.stakeKeeper, app.paramsKeeper.Getter(), app.RegisterCodespace(slashing.DefaultCodespace))
 
@@ -252,6 +254,11 @@ func (app *GaiaApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci
 	validators, err := stake.InitGenesis(ctx, app.stakeKeeper, genesisState.StakeData)
 	if err != nil {
 		panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468 // return sdk.ErrGenesisParse("").TraceCause(err, "")
+	}
+
+	err = slashing.InitGenesis(ctx, &app.slashingKeeper, genesisState.SlashingData)
+	if err != nil {
+		panic(err)
 	}
 
 	return abci.ResponseInitChain{

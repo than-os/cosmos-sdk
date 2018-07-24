@@ -20,6 +20,7 @@ BREAKING CHANGES
   * `gaiacli gov deposit --depositer`
   * `gaiacli gov vote --voter`
 * [x/gov] Added tags sub-package, changed tags to use dash-case 
+* [cli] #1551: Officially removed `--name` from CLI commands
 
 FEATURES
 * [lcd] Can now query governance proposals by ProposalStatus
@@ -42,6 +43,13 @@ IMPROVEMENTS
 * [x/gov] Votes on a proposal can now be queried
 * [x/bank] Unit tests are now table-driven
 * [tests] Fixes ansible scripts to work with AWS too
+* [client] \#1551: Refactored `CoreContext`
+  * Renamed `CoreContext` to `QueryContext`
+  * Removed all tx related fields and logic (building & signing) to separate
+  structure `TxContext` in `x/auth/client/context`
+  * Cleaned up documentation and API of what used to be `CoreContext`
+  * Implemented `KeyType` enum for key info
 
 BUG FIXES
 *  \#1666 Add intra-tx counter to the genesis validators
+* [tests] \#1551: Fixed invalid LCD test JSON payload in `doIBCTransfer`

@@ -137,7 +137,7 @@ var (
 // Gets procedure from store. TODO: move to global param store and allow for updating of this
 func (keeper Keeper) GetDepositProcedure() DepositProcedure {
 	return DepositProcedure{
-		MinDeposit:       sdk.Coins{sdk.NewCoin("steak", defaultMinDeposit)},
+		MinDeposit:       sdk.Coins{sdk.NewInt64Coin("steak", defaultMinDeposit)},
 		MaxDepositPeriod: defaultMaxDepositPeriod,
 	}
 }

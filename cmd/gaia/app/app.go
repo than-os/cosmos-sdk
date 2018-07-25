@@ -114,6 +114,8 @@ func NewGaiaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptio
 		cmn.Exit(err.Error())
 	}
 
+	app.Seal()
+
 	return app
 }
 
